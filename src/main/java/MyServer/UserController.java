@@ -1,6 +1,6 @@
 package myserver;
 
-import org.springframework.web.bind.annotation.*; 
+import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
@@ -29,12 +29,12 @@ public class UserController {
 		/*Creating http headers object to place into response entity the server will return.
 		This is what allows us to set the content-type to application/json or any other content-type
 		we would want to return */
-		HttpHeaders responseHeaders = new HttpHeaders(); 
+		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
-		
+
 		MessageDigest digest = null;
 		String hashedKey = null;
-		
+
 		hashedKey = BCrypt.hashpw(password, BCrypt.gensalt());
 
     	if (!MyServer.users.containsKey(username)) {
@@ -58,9 +58,9 @@ public class UserController {
 		/*Creating http headers object to place into response entity the server will return.
 		This is what allows us to set the content-type to application/json or any other content-type
 		we would want to return */
-		HttpHeaders responseHeaders = new HttpHeaders(); 
+		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
-		
+
 		MessageDigest digest = null;
 		String hashedKey = null;
 
@@ -79,26 +79,32 @@ public class UserController {
 
 	@RequestMapping(value = "/connectToDB", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
 	public ResponseEntity<String> connectToDB(HttpServletRequest request) {
-		String nameToPull = request.getParameter("firstname");
-		HttpHeaders responseHeaders = new HttpHeaders(); 
+		//String nameToPull = request.getParameter("firstname");
+		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
 		Connection conn = null;
 		JSONArray usersArray = new JSONArray();
 	    try {
-	    	conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/classdb?useUnicode=true&characterEncoding=UTF-8", "root", "password");
-			String query = "SELECT userid, firstName FROM users WHERE firstname=?";
+	    	conn = DriverManager.getConnection("jdbc:mysql://ec2-13-58-168-240.us-east-2.compute.amazonaws.com:3306/classdb?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+			String query = "SELECT * FROM users.users";
 			PreparedStatement stmt = null;
 	        stmt = conn.prepareStatement(query);
-	        stmt.setString(1, nameToPull);
+	        //stmt.setString(1, nameToPull);
 	        ResultSet rs = stmt.executeQuery();
-	        
+
 	        while (rs.next()) {
-	            String name = rs.getString("firstName");
-	            int userID = rs.getInt("userid");
+	            String username = rs.getString("usename");
+	            int id = rs.getInt("id");
+							String password = rs.getString("password");
+							String locations = rs.getString("locations");
+							String description = rs.getString("description");
 
 	            JSONObject obj = new JSONObject();
-	            obj.put("name", name);
-	            obj.put("userID", userID);
+	            obj.put("username", username);
+	            obj.put("id", id);
+							obj.put("password", password);
+							obj.put("locations", locations);
+							obj.put("description", description);
 	            usersArray.put(obj);
 	        }
 	    } catch (SQLException e ) {
@@ -108,7 +114,7 @@ public class UserController {
 	    	}catch(SQLException se) {
 
 	    	}
-	        
+
 	    }
 		return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
 	}

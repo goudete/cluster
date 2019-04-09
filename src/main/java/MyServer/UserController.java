@@ -79,13 +79,13 @@ public class UserController {
 
 	@RequestMapping(value = "/connectToDB", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
 	public ResponseEntity<String> connectToDB(HttpServletRequest request) {
-		//String nameToPull = request.getParameter("firstname");
+		String nameToPull = request.getParameter("firstname");
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
 		Connection conn = null;
 		JSONArray usersArray = new JSONArray();
 	    try {
-	    	conn = DriverManager.getConnection("jdbc:mysql://ec2-13-58-168-240.us-east-2.compute.amazonaws.com:3306/classdb?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+	    	conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
 			String query = "SELECT * FROM users.users";
 			PreparedStatement stmt = null;
 	        stmt = conn.prepareStatement(query);
@@ -93,7 +93,7 @@ public class UserController {
 	        ResultSet rs = stmt.executeQuery();
 
 	        while (rs.next()) {
-	            String username = rs.getString("usename");
+	            String username = rs.getString("username");
 	            int id = rs.getInt("id");
 							String password = rs.getString("password");
 							String locations = rs.getString("locations");
@@ -108,6 +108,7 @@ public class UserController {
 	            usersArray.put(obj);
 	        }
 	    } catch (SQLException e ) {
+				return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
 	    } finally {
 	    	try {
 	    		if (conn != null) { conn.close(); }
@@ -116,6 +117,7 @@ public class UserController {
 	    	}
 
 	    }
+
 		return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
 	}
 

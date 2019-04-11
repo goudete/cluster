@@ -20,11 +20,13 @@ import org.json.JSONArray;
 
 @RestController
 public class UserController {
-	@RequestMapping(value = "/register", method = RequestMethod.POST) // <-- setup the endpoint URL at /hello with the HTTP POST method
+	@RequestMapping(value = "/register", method = RequestMethod.POST) // <-- setup the endpoint URL at /register with the HTTP POST method
 	public ResponseEntity<String> register(@RequestBody String payload, HttpServletRequest request) {
 		JSONObject payloadObj = new JSONObject(payload);
-		String username = payloadObj.getString("username"); //Grabbing name and age parameters from URL
+		String username = payloadObj.getString("username");
 		String password = payloadObj.getString("password");
+		String hashedKey = null;
+		hashedKey = BCrypt.hashpw(password, BCrypt.gensalt());
 
 		/*Creating http headers object to place into response entity the server will return.
 		This is what allows us to set the content-type to application/json or any other content-type
@@ -32,24 +34,30 @@ public class UserController {
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
 
-		MessageDigest digest = null;
-		String hashedKey = null;
+			Connection conn = null;
+		    try {
+		    conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+				String query = "INSERT INTO clusterDB.users (username, password)"
+					+ " VALUES (?,?)";
+				PreparedStatement stmt = null;
+		        stmt = conn.prepareStatement(query);
+		        stmt.setString(1, username);
+						stmt.setString(2, hashedKey);
+		        int rs = stmt.executeUpdate();
 
-		hashedKey = BCrypt.hashpw(password, BCrypt.gensalt());
+		    } catch (SQLException e ) {
+					return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+		    } finally {
+		    	try {
+		    		if (conn != null) { conn.close(); }
+		    	}catch(SQLException se) {
 
-    	if (!MyServer.users.containsKey(username)) {
-			MyServer.users.put(username, hashedKey);
-		}else {
-			JSONObject responseObj = new JSONObject();
-			responseObj.put("message", "username taken");
-			return new ResponseEntity(responseObj.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
-		}
-		//Returns the response with a String, headers, and HTTP status
-		JSONObject responseObj = new JSONObject();
-		responseObj.put("username", username);
-		responseObj.put("message", "user registered");
-		return new ResponseEntity(responseObj.toString(), responseHeaders, HttpStatus.OK);
-	}
+		    	}
+		    }
+			return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);
+
+	 }
+
 	@RequestMapping(value = "/login", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
 	public ResponseEntity<String> login(HttpServletRequest request) {
 		String username = request.getParameter("username"); //Grabbing name and age parameters from URL
@@ -79,19 +87,18 @@ public class UserController {
 
 	@RequestMapping(value = "/connectToDB", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
 	public ResponseEntity<String> connectToDB(HttpServletRequest request) {
-		String nameToPull = request.getParameter("firstname");
+		//String nameToPull = request.getParameter("firstname");
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
 		Connection conn = null;
 		JSONArray usersArray = new JSONArray();
 	    try {
-	    	conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+	    conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
 			String query = "SELECT * FROM users.users";
 			PreparedStatement stmt = null;
 	        stmt = conn.prepareStatement(query);
 	        //stmt.setString(1, nameToPull);
 	        ResultSet rs = stmt.executeQuery();
-
 	        while (rs.next()) {
 	            String username = rs.getString("username");
 	            int id = rs.getInt("id");
@@ -115,9 +122,7 @@ public class UserController {
 	    	}catch(SQLException se) {
 
 	    	}
-
 	    }
-
 		return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
 	}
 

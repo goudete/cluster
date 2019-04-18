@@ -17,10 +17,13 @@ import java.sql.SQLException;
 
 import org.json.JSONObject;
 import org.json.JSONArray;
+import java.util.ArrayList;
+import java.util.Random;
+import java.nio.charset.Charset;
 
 @RestController
 public class UserController {
-	@RequestMapping(value = "/register", method = RequestMethod.POST) // <-- setup the endpoint URL at /register with the HTTP POST method
+	@RequestMapping(value = "/register", method = RequestMethod.POST) 
 	public ResponseEntity<String> register(@RequestBody String payload, HttpServletRequest request) {
 		JSONObject payloadObj = new JSONObject(payload);
 		String username = payloadObj.getString("username");
@@ -28,9 +31,6 @@ public class UserController {
 		String hashedKey = null;
 		hashedKey = BCrypt.hashpw(password, BCrypt.gensalt());
 
-		/*Creating http headers object to place into response entity the server will return.
-		This is what allows us to set the content-type to application/json or any other content-type
-		we would want to return */
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
 
@@ -55,35 +55,116 @@ public class UserController {
 		    	}
 		    }
 			return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);
-
 	 }
 
-	@RequestMapping(value = "/login", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
-	public ResponseEntity<String> login(HttpServletRequest request) {
-		String username = request.getParameter("username"); //Grabbing name and age parameters from URL
-		String password = request.getParameter("password");
+	@RequestMapping(value = "/login", method = RequestMethod.GET)
+	public ResponseEntity<String> login(@RequestBody String payload, HttpServletRequest request) {
+		JSONObject payloadObj = new JSONObject(payload);
+		String username = payloadObj.getString("username");
+		String password = payloadObj.getString("password");
 
-		/*Creating http headers object to place into response entity the server will return.
-		This is what allows us to set the content-type to application/json or any other content-type
-		we would want to return */
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
+		Connection conn = null;
+		JSONObject responseObject = new JSONObject();
+			try {
+			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+			String query = "SELECT password FROM clusterDB.users WHERE username = " + "\'" + username + "\'";
+			PreparedStatement stmt = null;
+					stmt = conn.prepareStatement(query);
+					ResultSet rs = stmt.executeQuery();
 
-		MessageDigest digest = null;
-		String hashedKey = null;
+					while(rs.next()){
+					String returnedPassword = rs.getString("password");
+					if(BCrypt.checkpw(password, returnedPassword)){
 
-    	if (!MyServer.users.containsKey(username)) {
-			return new ResponseEntity("{\"message\":\"username not registered\"}", responseHeaders, HttpStatus.BAD_REQUEST);
-		}else {
-			String storedHashedKey = MyServer.users.get(username);
+						String token = generateRandomString(10);
+						User user = new User(username, token);
 
-			if (BCrypt.checkpw(password, storedHashedKey)) {
-				return new ResponseEntity("{\"message\":\"user logged in\"}", responseHeaders, HttpStatus.OK);
-			}else {
-				return new ResponseEntity("{\"message\":\"username/password combination is incorrect\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+						if(MyServer.tokensArrayList.size() == 100){
+							MyServer.tokensArrayList.remove(99);
+							MyServer.tokenHashmap.remove(username);
+							//send user back to login screen bc token has expired
+						}
+
+						MyServer.tokensArrayList.add(0, user);
+						MyServer.tokenHashmap.put(username, user);
+
+						responseObject.put("token", token);
+						responseObject.put("message", "user logged in");
+						return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
+					}
+					else{
+						return new ResponseEntity("{\"message\":\"username/password combination is incorrect\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+					}
+				}
+			} catch (SQLException e ) {
+				return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+			} finally {
+				try {
+					if (conn != null) { conn.close(); }
+				}catch(SQLException se) {
+					return new ResponseEntity(se.toString(), responseHeaders,HttpStatus.BAD_REQUEST);
+				}
 			}
-		}
+		return new ResponseEntity("{\"message\":\"dude, something went wrong\"}", responseHeaders, HttpStatus.BAD_REQUEST);
 	}
+
+	// @RequestMapping(value = "/postFavoriteSpot", method = RequestMethod.GET)
+	// public ResponseEntity<String> login(HttpServletRequest request) {
+	// 	String username = request.getParameter("username");
+	// 	String token = request.getParameter("token");
+	//
+	// 	HttpHeaders responseHeaders = new HttpHeaders();
+  //   	responseHeaders.set("Content-Type", "application/json");
+	//
+	// 	if (!validateToken(username, token)) {
+	// 		return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+	// 	}else {
+	//
+	// 	}
+	// 	User user = MyServer.tokenHashmap.get(username);
+	// 	if(user.token.equals(token)){
+	// 		MyServer.tokensArrayList.
+	// 	}
+	// 	else{
+	// 		return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+	//
+	// 	}
+	//
+	// 		try {
+	// 		conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+	// 		String query = "SELECT password FROM clusterDB.users WHERE username = " + "\'" + username + "\'";
+	// 		PreparedStatement stmt = null;
+	// 				stmt = conn.prepareStatement(query);
+	// 				ResultSet rs = stmt.executeQuery();
+	//
+	// 				while(rs.next()){
+	// 				String returnedPassword = rs.getString("password");
+	// 				if(BCrypt.checkpw(password, returnedPassword)){
+	// 					String token = generateRandomString(10);
+	// 					JSONObject responseObject = new JSONObject();
+	// 					responseObject.put("token", token);
+	// 					responseObject.put("message", "user logged in");
+	// 					return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
+	// 				}
+	// 				else{
+	// 					//return new ResponseEntity("{\"message\":\"username/password combination is incorrect\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+	// 					//obj.put("failure", "failure");
+	// 					//arrayCheck.put(obj);
+	// 				}
+	// 			}
+	// 		} catch (SQLException e ) {
+	// 			return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+	// 		} finally {
+	// 			try {
+	// 				if (conn != null) { conn.close(); }
+	// 			}catch(SQLException se) {
+	// 				return new ResponseEntity(se.toString(), responseHeaders,HttpStatus.BAD_REQUEST);
+	// 			}
+	// 		}
+	// 	return new ResponseEntity(arrayCheck.toString(), responseHeaders, HttpStatus.OK);
+	// }
 
 	@RequestMapping(value = "/connectToDB", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
 	public ResponseEntity<String> connectToDB(HttpServletRequest request) {
@@ -133,4 +214,23 @@ public class UserController {
 		}
 		return builder.toString();
 	}
+
+	public static String generateRandomString(int length){
+		byte[] array = new byte[length];
+		new Random().nextBytes(array);
+		String generatedString = new String(array, Charset.forName("UTF-8"));
+
+		return generatedString;
+	}
+
+	public boolean validateToken(String username, String token){
+			User user = MyServer.tokenHashmap.get(username);
+			if(user.token.equals(token)){
+				return true;
+			}
+			else{
+				return false;
+			}
+	}
+
 }

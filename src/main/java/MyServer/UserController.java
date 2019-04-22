@@ -23,7 +23,7 @@ import java.nio.charset.Charset;
 
 @RestController
 public class UserController {
-	@RequestMapping(value = "/register", method = RequestMethod.POST) 
+	@RequestMapping(value = "/register", method = RequestMethod.POST)
 	public ResponseEntity<String> register(@RequestBody String payload, HttpServletRequest request) {
 		JSONObject payloadObj = new JSONObject(payload);
 		String username = payloadObj.getString("username");
@@ -180,7 +180,8 @@ public class UserController {
 	        stmt = conn.prepareStatement(query);
 	        //stmt.setString(1, nameToPull);
 	        ResultSet rs = stmt.executeQuery();
-	        while (rs.next()) {
+
+					while (rs.next()) {
 	            String username = rs.getString("username");
 	            int id = rs.getInt("id");
 							String password = rs.getString("password");
@@ -204,6 +205,47 @@ public class UserController {
 
 	    	}
 	    }
+		return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
+	}
+
+	@RequestMapping(value = "/getMyMap", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
+	public ResponseEntity<String> getMyMap(@RequestBody String payload, HttpServletRequest request) {
+		//String nameToPull = request.getParameter("firstname");
+	JSONObject usernamePayload = new JSONObject(payload);
+	String username = usernamePayload.getString("username");
+	HttpHeaders responseHeaders = new HttpHeaders();
+			responseHeaders.set("Content-Type", "application/json");
+		Connection conn = null;
+		JSONArray usersArray = new JSONArray();
+			try {
+			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+			String query = "SELECT * FROM clusterDB.locations WHERE userID='(username)'"
+				+ " VALUE (?)";
+				PreparedStatement stmt = null;
+					stmt = conn.prepareStatement(query);
+					stmt.setString(1, username);
+					ResultSet rs = stmt.executeQuery();
+					while (rs.next()) {
+
+							String coordinates = rs.getString("coordinates");
+							String placeName = rs.getString("place_name");
+							String description = rs.getString("description");
+
+							JSONObject obj = new JSONObject();
+							obj.put("coordinates", coordinates);
+							obj.put("placeName", placeName);
+							obj.put("description", description);
+							usersArray.put(obj);
+					}
+			} catch (SQLException e ) {
+				return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+			} finally {
+				try {
+					if (conn != null) { conn.close(); }
+				}catch(SQLException se) {
+
+				}
+			}
 		return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
 	}
 

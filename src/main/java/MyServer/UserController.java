@@ -186,7 +186,7 @@ public class UserController {
 		        try {
 		          if (conn != null) { conn.close(); }
 		        }catch(SQLException se) {
-
+ 
 		        }
 		      }
 		    return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);

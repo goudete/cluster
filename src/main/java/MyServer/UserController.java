@@ -77,9 +77,8 @@ public class UserController {
 					while(rs.next()){
 					String returnedPassword = rs.getString("password");
 					if(BCrypt.checkpw(password, returnedPassword)){
-
 						String token = generateRandomString(10);
-						User user = new User(username, token);
+						User user = new User(userID, username, token);
 
 						if(MyServer.tokensArrayList.size() == 100){
 							MyServer.tokensArrayList.remove(99);
@@ -114,7 +113,11 @@ public class UserController {
 	public ResponseEntity<String> addLocation(@RequestBody String payload, HttpServletRequest request) {
 		JSONObject payloadObj = new JSONObject(payload);
 		String username = request.getString("username");
-		//String token = request.getString("token");
+		String name = request.getString("name");
+		String address = request.getString("address");
+		Float lat = request.getString("lat");
+		Float lng = request.getString("lng");
+		String type = request.getString("type");
 
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
@@ -122,74 +125,67 @@ public class UserController {
 		if (!validateToken(username, token)) {
 			return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
 		}else {
-
-		}
-
 			try {
 			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
-			String query = "SELECT password FROM clusterDB.users WHERE username = " + "\'" + username + "\'";
+			String query = "INSERT INTO clusterDB.locations (username, name, address, lat, lng, type)"
+				+ " VALUES (?,?,?,?,?,?)";
 			PreparedStatement stmt = null;
 					stmt = conn.prepareStatement(query);
-					ResultSet rs = stmt.executeQuery();
+					stmt.setString(1, username);
+					stmt.setString(2, name);
+					stmt.setString(3, address);
+					stmt.setFloat(4, lat);
+					stmt.setFloat(5, lng);
+					stmt.setString(6,type);
+					int rs = stmt.executeUpdate();
 
-					while(rs.next()){
-					String returnedPassword = rs.getString("password");
-					if(BCrypt.checkpw(password, returnedPassword)){
-						String token = generateRandomString(10);
-						JSONObject responseObject = new JSONObject();
-						responseObject.put("token", token);
-						responseObject.put("message", "user logged in");
-						return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
-					}
-					else{
-
-					}
-				}
 			} catch (SQLException e ) {
 				return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
 			} finally {
 				try {
 					if (conn != null) { conn.close(); }
 				}catch(SQLException se) {
-					return new ResponseEntity(se.toString(), responseHeaders,HttpStatus.BAD_REQUEST);
+
 				}
 			}
-		return new ResponseEntity(arrayCheck.toString(), responseHeaders, HttpStatus.OK);
-	}
+		return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);
+
+		}
+ }
 
 	@RequestMapping(value = "/friendConnection", method = RequestMethod.POST)
-public ResponseEntity<String> friendConnection(@RequestBody String payload, HttpServletRequest request) {
-	JSONObject payloadObj = new JSONObject(payload);
-	String requester = payloadObj.getString("requester");
-	String requestee = payloadObj.getString("requestee");
+	public ResponseEntity<String> friendConnection(@RequestBody String payload, HttpServletRequest request) {
+		JSONObject payloadObj = new JSONObject(payload);
+		String requester = payloadObj.getString("requester");
+		String requestee = payloadObj.getString("requestee");
 
-	HttpHeaders responseHeaders = new HttpHeaders();
-		responseHeaders.set("Content-Type", "application/json");
+		HttpHeaders responseHeaders = new HttpHeaders();
+			responseHeaders.set("Content-Type", "application/json");
 
-		if (!validateToken(username, token)) {
-			return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
-		}else {
-			Connection conn = null;
-				try {
-				conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
-				String query = "INSERT INTO clusterDB.friends (username, password)"
-					+ " VALUES (?,?)";
-				PreparedStatement stmt = null;
-						stmt = conn.prepareStatement(query);
-						stmt.setString(1, username);
-						stmt.setString(2, hashedKey);
-						int rs = stmt.executeUpdate();
-
-				} catch (SQLException e ) {
-					return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
-				} finally {
+			if (!validateToken(username, token)) {
+				return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+			}else {
+				Connection conn = null;
 					try {
-						if (conn != null) { conn.close(); }
-					}catch(SQLException se) {
+					conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+					String query = "INSERT INTO clusterDB.friends (username, password)"
+						+ " VALUES (?,?)";
+					PreparedStatement stmt = null;
+							stmt = conn.prepareStatement(query);
+							stmt.setString(1, username);
+							stmt.setString(2, hashedKey);
+							int rs = stmt.executeUpdate();
 
+					} catch (SQLException e ) {
+						return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+					} finally {
+						try {
+							if (conn != null) { conn.close(); }
+						}catch(SQLException se) {
+
+						}
 					}
-				}
-			return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);
+				return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);
 		}
  }
 
@@ -249,7 +245,7 @@ public ResponseEntity<String> friendConnection(@RequestBody String payload, Http
 	// 	return new ResponseEntity(arrayCheck.toString(), responseHeaders, HttpStatus.OK);
 	// }
 
-	@RequestMapping(value = "/connectToDB", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
+	@RequestMapping(value = "/connectToDB", method = RequestMethod.GET)
 	public ResponseEntity<String> connectToDB(HttpServletRequest request) {
 		//String nameToPull = request.getParameter("firstname");
 		HttpHeaders responseHeaders = new HttpHeaders();
@@ -291,42 +287,42 @@ public ResponseEntity<String> friendConnection(@RequestBody String payload, Http
 		return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
 	}
 
-	@RequestMapping(value = "/getMyMap", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
+	@RequestMapping(value = "/getMyMap", method = RequestMethod.GET)
 	public ResponseEntity<String> getMyMap(@RequestBody String payload, HttpServletRequest request) {
-	JSONObject usernamePayload = new JSONObject(payload);
-	String username = usernamePayload.getString("username");
-	HttpHeaders responseHeaders = new HttpHeaders();
-			responseHeaders.set("Content-Type", "application/json");
-		Connection conn = null;
-		JSONArray usersArray = new JSONArray();
-			try {
-			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
-			String query = "SELECT * FROM clusterDB.locations WHERE userID='(username)'"
-				+ " VALUE (?)";
-				PreparedStatement stmt = null;
-					stmt = conn.prepareStatement(query);
-					stmt.setString(1, username);
-					ResultSet rs = stmt.executeQuery();
-					while (rs.next()) {
-
-							String coordinates = rs.getString("coordinates");
-							String placeName = rs.getString("place_name");
-							String description = rs.getString("description");
-
-							JSONObject obj = new JSONObject();
-							obj.put("coordinates", coordinates);
-							obj.put("placeName", placeName);
-							obj.put("description", description);
-							usersArray.put(obj);
-					}
-			} catch (SQLException e ) {
-				return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
-			} finally {
+		JSONObject usernamePayload = new JSONObject(payload);
+		String username = usernamePayload.getString("username");
+		HttpHeaders responseHeaders = new HttpHeaders();
+				responseHeaders.set("Content-Type", "application/json");
+			Connection conn = null;
+			JSONArray usersArray = new JSONArray();
 				try {
-					if (conn != null) { conn.close(); }
-				}catch(SQLException se) {
+				conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+				String query = "SELECT * FROM clusterDB.locations WHERE userID='(username)'"
+					+ " VALUE (?)";
+					PreparedStatement stmt = null;
+						stmt = conn.prepareStatement(query);
+						stmt.setString(1, username);
+						ResultSet rs = stmt.executeQuery();
+						while (rs.next()) {
 
-				}
+								String coordinates = rs.getString("coordinates");
+								String placeName = rs.getString("place_name");
+								String description = rs.getString("description");
+
+								JSONObject obj = new JSONObject();
+								obj.put("coordinates", coordinates);
+								obj.put("placeName", placeName);
+								obj.put("description", description);
+								usersArray.put(obj);
+						}
+				} catch (SQLException e ) {
+					return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+				} finally {
+					try {
+						if (conn != null) { conn.close(); }
+					}catch(SQLException se) {
+
+					}
 			}
 		return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
 	}

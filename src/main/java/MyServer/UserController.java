@@ -110,6 +110,53 @@ public class UserController {
 		return new ResponseEntity("{\"message\":\"dude, something went wrong\"}", responseHeaders, HttpStatus.BAD_REQUEST);
 	}
 
+	@RequestMapping(value = "/addLocation", method = RequestMethod.POST)
+	public ResponseEntity<String> addLocation(@RequestBody String payload, HttpServletRequest request) {
+		JSONObject payloadObj = new JSONObject(payload);
+		String username = request.getString("username");
+		//String token = request.getString("token");
+
+		HttpHeaders responseHeaders = new HttpHeaders();
+    	responseHeaders.set("Content-Type", "application/json");
+
+		if (!validateToken(username, token)) {
+			return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+		}else {
+
+		}
+
+			try {
+			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+			String query = "SELECT password FROM clusterDB.users WHERE username = " + "\'" + username + "\'";
+			PreparedStatement stmt = null;
+					stmt = conn.prepareStatement(query);
+					ResultSet rs = stmt.executeQuery();
+
+					while(rs.next()){
+					String returnedPassword = rs.getString("password");
+					if(BCrypt.checkpw(password, returnedPassword)){
+						String token = generateRandomString(10);
+						JSONObject responseObject = new JSONObject();
+						responseObject.put("token", token);
+						responseObject.put("message", "user logged in");
+						return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
+					}
+					else{
+
+					}
+				}
+			} catch (SQLException e ) {
+				return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+			} finally {
+				try {
+					if (conn != null) { conn.close(); }
+				}catch(SQLException se) {
+					return new ResponseEntity(se.toString(), responseHeaders,HttpStatus.BAD_REQUEST);
+				}
+			}
+		return new ResponseEntity(arrayCheck.toString(), responseHeaders, HttpStatus.OK);
+	}
+
 	// @RequestMapping(value = "/postFavoriteSpot", method = RequestMethod.GET)
 	// public ResponseEntity<String> login(HttpServletRequest request) {
 	// 	String username = request.getParameter("username");

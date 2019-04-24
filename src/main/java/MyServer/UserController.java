@@ -62,6 +62,7 @@ public class UserController {
 		JSONObject payloadObj = new JSONObject(payload);
 		String username = payloadObj.getString("username");
 		String password = payloadObj.getString("password");
+		int userID = payloadObj.getInt("userID");
 
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
@@ -112,15 +113,18 @@ public class UserController {
 	@RequestMapping(value = "/addLocation", method = RequestMethod.POST)
 	public ResponseEntity<String> addLocation(@RequestBody String payload, HttpServletRequest request) {
 		JSONObject payloadObj = new JSONObject(payload);
-		String username = request.getString("username");
-		String name = request.getString("name");
-		String address = request.getString("address");
-		Float lat = request.getString("lat");
-		Float lng = request.getString("lng");
-		String type = request.getString("type");
+		String username = payloadObj.getString("username");
+		String name = payloadObj.getString("name");
+		String address = payloadObj.getString("address");
+		String lat = payloadObj.getString("lat");
+		String lng = payloadObj.getString("lng");
+		String type = payloadObj.getString("type");
+		String token = payloadObj.getString("token");
 
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
+
+		Connection conn = null;
 
 		if (!validateToken(username, token)) {
 			return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
@@ -135,8 +139,8 @@ public class UserController {
 					stmt.setString(1, username);
 					stmt.setString(2, name);
 					stmt.setString(3, address);
-					stmt.setFloat(4, lat);
-					stmt.setFloat(5, lng);
+					stmt.setString(4, lat);
+					stmt.setString(5, lng);
 					stmt.setString(6,type);
 					int rs = stmt.executeUpdate();
 
@@ -190,7 +194,7 @@ public class UserController {
 				return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);
 		}
  }
- }
+
 
 	// @RequestMapping(value = "/postFavoriteSpot", method = RequestMethod.GET)
 	// public ResponseEntity<String> login(HttpServletRequest request) {
@@ -247,48 +251,48 @@ public class UserController {
 	// 		}
 	// 	return new ResponseEntity(arrayCheck.toString(), responseHeaders, HttpStatus.OK);
 	// }
-
-	@RequestMapping(value = "/connectToDB", method = RequestMethod.GET)
-	public ResponseEntity<String> connectToDB(HttpServletRequest request) {
-		//String nameToPull = request.getParameter("firstname");
-		HttpHeaders responseHeaders = new HttpHeaders();
-    	responseHeaders.set("Content-Type", "application/json");
-		Connection conn = null;
-		JSONArray usersArray = new JSONArray();
-	    try {
-	    conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
-			String query = "SELECT * FROM users.users";
-			PreparedStatement stmt = null;
-	        stmt = conn.prepareStatement(query);
-	        //stmt.setString(1, nameToPull);
-	        ResultSet rs = stmt.executeQuery();
-
-					while (rs.next()) {
-	            String username = rs.getString("username");
-	            int id = rs.getInt("id");
-							String password = rs.getString("password");
-							String locations = rs.getString("locations");
-							String description = rs.getString("description");
-
-	            JSONObject obj = new JSONObject();
-	            obj.put("username", username);
-	            obj.put("id", id);
-							obj.put("password", password);
-							obj.put("locations", locations);
-							obj.put("description", description);
-	            usersArray.put(obj);
-	        }
-	    } catch (SQLException e ) {
-				return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
-	    } finally {
-	    	try {
-	    		if (conn != null) { conn.close(); }
-	    	}catch(SQLException se) {
-
-	    	}
-	    }
-		return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
-	}
+	//
+	// @RequestMapping(value = "/connectToDB", method = RequestMethod.GET)
+	// public ResponseEntity<String> connectToDB(HttpServletRequest request) {
+	// 	//String nameToPull = request.getParameter("firstname");
+	// 	HttpHeaders responseHeaders = new HttpHeaders();
+  //   	responseHeaders.set("Content-Type", "application/json");
+	// 	Connection conn = null;
+	// 	JSONArray usersArray = new JSONArray();
+	//     try {
+	//     conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+	// 		String query = "SELECT * FROM users.users";
+	// 		PreparedStatement stmt = null;
+	//         stmt = conn.prepareStatement(query);
+	//         //stmt.setString(1, nameToPull);
+	//         ResultSet rs = stmt.executeQuery();
+	//
+	// 				while (rs.next()) {
+	//             String username = rs.getString("username");
+	//             int id = rs.getInt("id");
+	// 						String password = rs.getString("password");
+	// 						String locations = rs.getString("locations");
+	// 						String description = rs.getString("description");
+	//
+	//             JSONObject obj = new JSONObject();
+	//             obj.put("username", username);
+	//             obj.put("id", id);
+	// 						obj.put("password", password);
+	// 						obj.put("locations", locations);
+	// 						obj.put("description", description);
+	//             usersArray.put(obj);
+	//         }
+	//     } catch (SQLException e ) {
+	// 			return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+	//     } finally {
+	//     	try {
+	//     		if (conn != null) { conn.close(); }
+	//     	}catch(SQLException se) {
+	//
+	//     	}
+	//     }
+	// 	return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
+	// }
 
 	@RequestMapping(value = "/getMyMap", method = RequestMethod.GET)
 	public ResponseEntity<String> getMyMap(@RequestBody String payload, HttpServletRequest request) {

@@ -17,11 +17,11 @@ public class MyServer {
 }
 
 class User{
-	String userID;
+	int userID;
 	String username;
 	String token;
-	User(String userID, String username, String token){
-		this.userID;
+	User(int userID, String username, String token){
+		this.userID = userID;
 		this.username = username;
 		this.token = token;
 	}

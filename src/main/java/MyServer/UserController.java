@@ -62,7 +62,7 @@ public class UserController {
 		JSONObject payloadObj = new JSONObject(payload);
 		String username = payloadObj.getString("username");
 		String password = payloadObj.getString("password");
-		int userID = payloadObj.getInt("userID");
+		//int userID = payloadObj.getInt("userID");
 
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
@@ -79,7 +79,7 @@ public class UserController {
 					String returnedPassword = rs.getString("password");
 					if(BCrypt.checkpw(password, returnedPassword)){
 						String token = generateRandomString(10);
-						User user = new User(userID, username, token);
+						User user = new User(username, token);
 
 						if(MyServer.tokensArrayList.size() == 100){
 							MyServer.tokensArrayList.remove(99);
@@ -114,22 +114,23 @@ public class UserController {
 	public ResponseEntity<String> addLocation(@RequestBody String payload, HttpServletRequest request) {
 		JSONObject payloadObj = new JSONObject(payload);
 		String username = payloadObj.getString("username");
+		String token = payloadObj.getString("token");
 		String name = payloadObj.getString("name");
 		String address = payloadObj.getString("address");
 		String lat = payloadObj.getString("lat");
 		String lng = payloadObj.getString("lng");
 		String type = payloadObj.getString("type");
-		String token = payloadObj.getString("token");
+
 
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
 
 		Connection conn = null;
+		JSONObject responseObject = new JSONObject();
 
 		if (!validateToken(username, token)) {
 			return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
 		}else {
-
 			try {
 			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
 			String query = "INSERT INTO clusterDB.locations (username, name, address, lat, lng, type)"
@@ -144,18 +145,26 @@ public class UserController {
 					stmt.setString(6,type);
 					int rs = stmt.executeUpdate();
 
+					responseObject.put("username", username);
+					responseObject.put("token", token);
+					responseObject.put("name", name);
+					responseObject.put("address", address);
+					responseObject.put("lat", lat);
+					responseObject.put("lng", lng);
+					responseObject.put("type", type);
+					return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
+
 			} catch (SQLException e ) {
 				return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
 			} finally {
 				try {
 					if (conn != null) { conn.close(); }
 				}catch(SQLException se) {
-
+					return new ResponseEntity(se.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
 				}
 			}
-		return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);
-
 		}
+		//return new ResponseEntity("{\"message\":\"dude, something went wrong\"}", responseHeaders, HttpStatus.BAD_REQUEST);
  }
 
 

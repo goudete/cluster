@@ -162,7 +162,9 @@ public class UserController {
 	@RequestMapping(value = "/friendConnection", method = RequestMethod.POST)
 	public ResponseEntity<String> friendConnection(@RequestBody String payload, HttpServletRequest request) {
 		JSONObject payloadObj = new JSONObject(payload);
-		String requester = payloadObj.getString("requester");
+		String username = payloadObj.getString("username");
+		String token = payloadObj.getString("token");
+		String requester = payloadObj.getString("username");
 		String requestee = payloadObj.getString("requestee");
 
 		HttpHeaders responseHeaders = new HttpHeaders();
@@ -174,12 +176,12 @@ public class UserController {
 				Connection conn = null;
 					try {
 					conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
-					String query = "INSERT INTO clusterDB.friends (username, password)"
+					String query = "INSERT INTO clusterDB.friends (requester, requestee)"
 						+ " VALUES (?,?)";
 					PreparedStatement stmt = null;
 							stmt = conn.prepareStatement(query);
-							stmt.setString(1, username);
-							stmt.setString(2, hashedKey);
+							stmt.setString(1, requester);
+							stmt.setString(2, requestee);
 							int rs = stmt.executeUpdate();
 
 					} catch (SQLException e ) {

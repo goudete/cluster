@@ -30,6 +30,7 @@ public class UserController {
 		String password = payloadObj.getString("password");
 		String hashedKey = null;
 		hashedKey = BCrypt.hashpw(password, BCrypt.gensalt());
+		JSONObject responseObject = new JSONObject();
 
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
@@ -44,6 +45,22 @@ public class UserController {
 		        stmt.setString(1, username);
 						stmt.setString(2, hashedKey);
 		        int rs = stmt.executeUpdate();
+
+						String token = generateRandomString(10);
+						User user = new User(username, token);
+
+						if(MyServer.tokensArrayList.size() == 100){
+							MyServer.tokensArrayList.remove(99);
+							MyServer.tokenHashmap.remove(username);
+						}
+
+						MyServer.tokensArrayList.add(0, user);
+						MyServer.tokenHashmap.put(username, user);
+
+						responseObject.put("username", username);
+						responseObject.put("token", token);
+						responseObject.put("message", "user registered and logged in");
+						new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
 
 		    } catch (SQLException e ) {
 					return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
@@ -70,9 +87,10 @@ public class UserController {
 		JSONObject responseObject = new JSONObject();
 			try {
 			conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
-			String query = "SELECT password FROM clusterDB.users WHERE username = " + "\'" + username + "\'";
+			String query = "SELECT password FROM clusterDB.users WHERE username = ?";
 			PreparedStatement stmt = null;
 					stmt = conn.prepareStatement(query);
+					stmt.setString(1, username);
 					ResultSet rs = stmt.executeQuery();
 
 					while(rs.next()){
@@ -90,6 +108,7 @@ public class UserController {
 						MyServer.tokensArrayList.add(0, user);
 						MyServer.tokenHashmap.put(username, user);
 
+						responseObject.put("username", username);
 						responseObject.put("token", token);
 						responseObject.put("message", "user logged in");
 						return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);

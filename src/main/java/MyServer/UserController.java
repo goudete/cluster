@@ -197,13 +197,15 @@ public class UserController {
 
 		HttpHeaders responseHeaders = new HttpHeaders();
 			responseHeaders.set("Content-Type", "application/json");
-
+			JSONObject responseObject = new JSONObject();
 			if (!validateToken(username, token)) {
 				return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
 			}else {
 				Connection conn = null;
 					try {
 					conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+					//HOW TO QUERY IF REQUESTEE EXISTS, FOR NOW, NO CHECK
+					//if(requestee)
 					String query = "INSERT INTO clusterDB.friends (requester, requestee)"
 						+ " VALUES (?,?)";
 					PreparedStatement stmt = null;
@@ -211,6 +213,9 @@ public class UserController {
 							stmt.setString(1, requester);
 							stmt.setString(2, requestee);
 							int rs = stmt.executeUpdate();
+
+							responseObject.put("requester", requester);
+							responseObject.put("requestee", requestee);
 
 					} catch (SQLException e ) {
 						return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
@@ -221,7 +226,7 @@ public class UserController {
 
 						}
 					}
-				return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);
+				return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
 		}
  }
 

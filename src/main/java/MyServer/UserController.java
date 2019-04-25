@@ -60,7 +60,7 @@ public class UserController {
 						responseObject.put("username", username);
 						responseObject.put("token", token);
 						responseObject.put("message", "user registered and logged in");
-						new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
+						//new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
 
 		    } catch (SQLException e ) {
 					return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
@@ -71,7 +71,7 @@ public class UserController {
 
 		    	}
 		    }
-			return new ResponseEntity(payloadObj.toString(), responseHeaders, HttpStatus.OK);
+			return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
 	 }
 
 	@RequestMapping(value = "/login", method = RequestMethod.GET)

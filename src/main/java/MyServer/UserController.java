@@ -237,6 +237,67 @@ public class UserController {
 		//return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
  		}
 
+	//SEARCHFRIENDMAP API CALL
+	//IF REQUESTER IS FRIENDS WITH REQUESTEE, RETURN JSON OBJECT WITH REQUESTEE'S LOCATIONS
+	@RequestMapping(value = "/searchFriendMap", method = RequestMethod.GET)
+	public ResponseEntity<String> searchFriendMap(HttpServletRequest request){
+		String username = request.getParameter("username");
+		String token = request.getParameter("token");
+		String friendUsername = request.getParameter("friendUsername");
+
+		HttpHeaders responseHeaders = new HttpHeaders();
+    	responseHeaders.set("Content-Type", "application/json");
+		JSONObject responseObject = new JSONObject();
+		if (!validateToken(username, token)) {
+			return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+		}else {
+			Connection conn = null;
+				try {
+					conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
+					String query = "SELECT * FROM clusterDB.friends WHERE requester = ?";
+					PreparedStatement stmt = null;
+					stmt = conn.prepareStatement(query);
+					stmt.setString(1, username);
+					ResultSet rs = stmt.executeQuery();
+					while (rs.next()) {
+						if(rs.getString("requestee") == friendUsername){
+								String newQuery = "SELECT * FROM clusterDB.locations WHERE username = ?";
+								stmt = conn.prepareStatement(newQuery);
+								stmt.setString(1, friendUsername);
+								ResultSet rs1 = stmt.executeQuery();
+
+								String name = rs1.getString("name");
+								String address = rs1.getString("address");
+								Double lat = rs1.getDouble("lat");
+								Double lng = rs1.getDouble("lng");
+								String type = rs1.getString("type");
+
+								responseObject.put("message","success");
+								responseObject.put("friendUsername", friendUsername);
+								responseObject.put("name", name);
+								responseObject.put("address", address);
+								responseObject.put("lat", lat);
+								responseObject.put("lng", lng);
+								responseObject.put("type", type);
+								return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
+							}
+						else{
+							return new ResponseEntity("{\"message\":\"no friend connection\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+						}
+					}
+				} catch (SQLException e ) {
+					return new ResponseEntity(e.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+				} finally {
+					try {
+						if (conn != null) { conn.close(); }
+					}catch(SQLException se) {
+						return new ResponseEntity(se.toString(), responseHeaders, HttpStatus.BAD_REQUEST);
+					}
+				}
+			}
+			return new ResponseEntity("{\"message\":\"dude, something went wrong\"}", responseHeaders, HttpStatus.OK);
+	}
+
 	@RequestMapping(value = "/getMyMap", method = RequestMethod.GET)
 	public ResponseEntity<String> getMyMap(@RequestBody String payload, HttpServletRequest request) {
 		JSONObject usernamePayload = new JSONObject(payload);

@@ -285,7 +285,7 @@ public class UserController {
 
 					}
 				}
-			return new ResponseEntity(usersArray.toString(), responseHeaders, HttpStatus.OK);
+			return new ResponseEntity(usersArray, responseHeaders, HttpStatus.OK);
 		}
 		}
 

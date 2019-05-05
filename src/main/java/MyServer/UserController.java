@@ -248,6 +248,7 @@ public class UserController {
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
 		JSONObject responseObject = new JSONObject();
+
 		if (!validateToken(username, token)) {
 			return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
 		}else {

@@ -13,6 +13,10 @@ public class MyServer {
 
 	public static void main(String[] args) {
 		SpringApplication.run(MyServer.class, args);
+
+		for(int i = 0; i < tokensArrayList.size(); i++){
+			System.out.println(tokensArrayList.get(i));
+		}
 	}
 }
 

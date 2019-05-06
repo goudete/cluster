@@ -181,7 +181,6 @@ public class UserController {
 				}
 			}
 		}
-		//return new ResponseEntity("{\"message\":\"dude, something went wrong\"}", responseHeaders, HttpStatus.BAD_REQUEST);
  }
 
 	@RequestMapping(value = "/friendConnection", method = RequestMethod.POST)
@@ -189,9 +188,7 @@ public class UserController {
 		JSONObject payloadObj = new JSONObject(payload);
 		String username = payloadObj.getString("username");
 		String token = payloadObj.getString("token");
-		//String requester = payloadObj.getString("username");
 		String requestee = payloadObj.getString("requestee");
-		//System.out.println(payloadObj.toString());
 		HttpHeaders responseHeaders = new HttpHeaders();
 			responseHeaders.set("Content-Type", "application/json");
 			JSONObject responseObject = new JSONObject();
@@ -199,7 +196,6 @@ public class UserController {
 				return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
 			}else {
 				Connection conn = null;
-				//Connection conn1 = null;
 					try {
 						conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
 						String query = "SELECT * FROM clusterDB.users WHERE username = ?";
@@ -211,9 +207,7 @@ public class UserController {
 							return new ResponseEntity("{\"message\":\"username does not exist, please try again\"}", responseHeaders, HttpStatus.BAD_REQUEST);
 							}
 						else{
-								//conn1 = DriverManager.getConnection("jdbc:mysql://localhost:3306/users?useUnicode=true&characterEncoding=UTF-8", "root", "cluster");
 								String newQuery = "INSERT INTO clusterDB.friends (requester, requestee)" + " VALUES (?,?)";
-								//PreparedStatement pstmt = null;
 								stmt = conn.prepareStatement(newQuery);
 								stmt.setString(1, username);
 								stmt.setString(2, requestee);
@@ -234,20 +228,23 @@ public class UserController {
 						}
 					}
 				}
-		//return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
  		}
 
 	//SEARCHFRIENDMAP API CALL
-	//IF REQUESTER IS FRIENDS WITH REQUESTEE, RETURN JSON OBJECT WITH REQUESTEE'S LOCATIONS
+	//IF REQUESTER IS FRIENDS WITH REQUESTEE, RETURN JSON ARRAY WITH REQUESTEE'S LOCATIONS
 	@RequestMapping(value = "/searchFriendMap", method = RequestMethod.GET)
-	public ResponseEntity<String> searchFriendMap(HttpServletRequest request){
-		String username = request.getParameter("username");
-		String token = request.getParameter("token");
-		String friendUsername = request.getParameter("friendUsername");
+	public ResponseEntity<String> searchFriendMap(@RequestBody String payload, HttpServletRequest request) {
+		JSONObject payloadObj = new JSONObject(payload);
+
+		String username = payloadObj.getString("username");
+		String token = payloadObj.getString("token");
+		String friendUsername = payloadObj.getString("friendUsername");
 
 		HttpHeaders responseHeaders = new HttpHeaders();
     	responseHeaders.set("Content-Type", "application/json");
+
 		JSONObject responseObject = new JSONObject();
+		JSONArray locationsArr = new JSONArray();
 
 		if (!validateToken(username, token)) {
 			return new ResponseEntity("{\"message\":\"username/Bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
@@ -261,29 +258,28 @@ public class UserController {
 					stmt.setString(1, username);
 					ResultSet rs = stmt.executeQuery();
 					while (rs.next()) {
-						if(rs.getString("requestee") == friendUsername){
+						String potentialUser = rs.getString(2);
+						if(potentialUser.equals(friendUsername)){
 								String newQuery = "SELECT * FROM clusterDB.locations WHERE username = ?";
 								stmt = conn.prepareStatement(newQuery);
 								stmt.setString(1, friendUsername);
 								ResultSet rs1 = stmt.executeQuery();
+								while(rs1.next()){
+									String name = rs1.getString("name");
+									String address = rs1.getString("address");
+									Double lat = rs1.getDouble("lat");
+									Double lng = rs1.getDouble("lng");
+									String type = rs1.getString("type");
 
-								String name = rs1.getString("name");
-								String address = rs1.getString("address");
-								Double lat = rs1.getDouble("lat");
-								Double lng = rs1.getDouble("lng");
-								String type = rs1.getString("type");
-
-								responseObject.put("message","success");
-								responseObject.put("friendUsername", friendUsername);
-								responseObject.put("name", name);
-								responseObject.put("address", address);
-								responseObject.put("lat", lat);
-								responseObject.put("lng", lng);
-								responseObject.put("type", type);
-								return new ResponseEntity(responseObject.toString(), responseHeaders, HttpStatus.OK);
-							}
-						else{
-							return new ResponseEntity("{\"message\":\"no friend connection\"}", responseHeaders, HttpStatus.BAD_REQUEST);
+									responseObject.put("message","success");
+									responseObject.put("friendUsername", friendUsername);
+									responseObject.put("name", name);
+									responseObject.put("address", address);
+									responseObject.put("lat", lat);
+									responseObject.put("lng", lng);
+									responseObject.put("type", type);
+									locationsArr.put(responseObject);
+								}
 						}
 					}
 				} catch (SQLException e ) {
@@ -296,19 +292,22 @@ public class UserController {
 					}
 				}
 			}
-			return new ResponseEntity("{\"message\":\"dude, something went wrong\"}", responseHeaders, HttpStatus.OK);
+			return new ResponseEntity(locationsArr.toString(), responseHeaders, HttpStatus.OK);
 	}
 
 	@RequestMapping(value = "/getMyMap", method = RequestMethod.GET) // <-- setup the endpoint URL at /hello with the HTTP POST method
-		public ResponseEntity<String> getMyMap(HttpServletRequest request) {
+		public ResponseEntity<String> getMyMap(@RequestBody String payload, HttpServletRequest request) {
+		JSONObject payloadObj = new JSONObject(payload);
 
-		String username = request.getParameter("username");
-		String token = request.getParameter("token");
+		String username = payloadObj.getString("username");
+		String token = payloadObj.getString("token");
 
 		HttpHeaders responseHeaders = new HttpHeaders();
 				responseHeaders.set("Content-Type", "application/json");
 			Connection conn = null;
-			JSONArray usersArray = new JSONArray();
+			JSONArray locationsArr = new JSONArray();
+			JSONObject responseObject = new JSONObject();
+
 			if(!validateToken(username, token)){
 				return new ResponseEntity("{\"message\":\"username/bad token\"}", responseHeaders, HttpStatus.BAD_REQUEST);
 			}
@@ -324,18 +323,17 @@ public class UserController {
 
 								String name = rs.getString("name");
 								String address = rs.getString("address");
+								Double lat = rs.getDouble("lat");
+								Double lng = rs.getDouble("lng");
 								String type = rs.getString("type");
-								int lat = rs.getInt("lat");
-								int lng = rs.getInt("lng");
 
-
-								JSONObject obj = new JSONObject();
-								obj.put("name", name);
-								obj.put("address", address);
-								obj.put("type", type);
-								obj.put("lat",lat);
-								obj.put("lng",lng);
-								usersArray.put(obj);
+								responseObject.put("name", name);
+								responseObject.put("address", address);
+								responseObject.put("lat",lat);
+								responseObject.put("lng",lng);
+								responseObject.put("type", type);
+								locationsArr.put(responseObject);
+								//return new ResponseEntity(locationsArr.toString(), responseHeaders, HttpStatus.OK);
 						}
 
 				} catch (SQLException e ) {
@@ -347,9 +345,9 @@ public class UserController {
 
 					}
 				}
-			return new ResponseEntity(usersArray, responseHeaders, HttpStatus.OK);
+			return new ResponseEntity(locationsArr.toString(), responseHeaders, HttpStatus.OK);
 		}
-		}
+	}
 
 	public static String bytesToHex(byte[] in) {
 		StringBuilder builder = new StringBuilder();
@@ -369,7 +367,7 @@ public class UserController {
 
 	public boolean validateToken(String username, String token){
 			User user = MyServer.tokenHashmap.get(username);
-			if (user == null) System.out.println("user is null");
+		//	if (user == null) System.out.println("user is null");
 			if(user.token.equals(token)){
 				return true;
 			}
